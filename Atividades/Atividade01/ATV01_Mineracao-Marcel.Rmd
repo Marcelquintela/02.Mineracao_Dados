@@ -1,0 +1,752 @@
+---
+title: "Mineração de Dados"
+Professor: João Batista M. Pereira
+Disciplina: Mineração de Dados
+Aluno: Marcel Dantas de Quintela
+Data: 08/02/2021
+output:
+  html_document: 
+    toc: yes
+    toc_float: yes
+    code_download: yes
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+setwd("C:\\Users\\Marcel\\Dropbox\\00-Ciencias-de-Dados\\M02_Mineracao\\Atividades\\ATV01_M02_Mineracao")
+```
+
+# Atividade 01
+
+::: {style="text-align: right; color:Red"}
+Professor : João Batista M. Pereira
+
+Aluno : Marcel Quintela
+:::
+
+O conjunto de dados a ser analisado corresponde a registros públicos de
+vendas de casas feitas de maio de 2014 a maio de 2015 no Condado de
+King, no estado de Washington, EUA.
+
+O banco de dados está dividido em dois arquivos: kchousing1.csv e
+kchousing2.csv. No primeiro arquivo, as variáveis são:
+
+-   id - identifcação única da casa vendida;
+-   date - data da venda;
+-   price - preço da venda;
+-   bedrooms - quantidade de quartos;
+-   bathrooms - quantidade de banheiros, em que .5 corresponde a
+    banheiro sem chuveiro;
+-   sqft living - pés quadrados do interior da casa;
+-   sqft lot - pés quadrados do terreno;
+-   floors - quantidade de andares;
+-   waterfront - 1, se casa é à beira-mar e 0, caso contrário;
+-   view - um índice de 0 a 4 indicando a qualidade da visão da
+    propriedade;
+-   condition - um índice de 0 a 5 indicando a condição do apartamento;
+-   date2 - data da venda (\\ano-mês").
+
+No segundo arquivo as variaveis são:
+
+-   id - identificação única da casa vendida;
+
+-   date - data da venda;
+
+-   grade - um índice de 1 a 13, em que:
+
+    -   1-3 corresponde a um baixo nível de construção e design;
+    -   7 corresponde a um nível médio de construção e design e
+    -   11-13 corresponde a um alto nível de construção e design
+
+-   sqft above - pés quadrados do interior da casa acima do nível do
+    solo;
+
+-   sqft basement - pés quadrados do interior da casa abaixo do nível do
+    solo;
+
+-   yr_built - ano em que a casa começou a ser construída;
+
+-   yr_renovated - ano da última reforma da casa;
+
+-   zipcode - código postal da casa;
+
+-   lat - latitude;
+
+-   long - longitude;
+
+-   sqft living15 - pés quadrados do interior das 15 casas mais
+    próximas;
+
+-   sqft lot15 - pés quadrados do terreno das 15 casas mais próximas.
+
+Orientações para cosntrução da Atividade[^1]
+
+[^1]: *A atividade deve ser feita no **R Markdown** e entregue em
+    **HTML** ou **PDF** com os códigos explicitados e as análises
+    comentadas. Os grácos devem ser explicativos, com nomes corretos nos
+    eixos, por exemplo*
+
+## Questão 01
+
+Importe as bases de dados nos arquivos para o **R** e junte-as em um
+único *data frame* com todos os registros e todas as variáveis.
+Lembre-se que as linhas correspondem aos registros de vendas e uma casa
+pode ser vendida mais de uma vez.
+
+Escolha pelo menos três variáveis do banco de dados e faça uma análise
+exploratória. Utilize gráficos tais como histogramas, *box-plots*,
+gráfico de barras e/ou gráfico de setores. Para as variáveis
+quantitativas, pode-se também calcular algumas medidas resumo tais como
+média, mediana, desvio padrão.
+
+### Importando dados
+
+```{r Q01.1}
+house1<-read.csv("kc_housing_1.csv",sep=",")
+head(house1)
+
+house2<-read.csv("kc_housing_2.csv",sep=",")
+head(house2)
+```
+
+::: {style="color: red"}
+Mesclando os dataframes importados em único dataframe usando como chave
+o "ID da venda" e a "data da venda", criando assim o banco de dados das
+operações de venda e caracteristicas das casas.
+:::
+
+```{r}
+vendas<-merge(house1,house2,by=c("id","date"))
+#checando os tamanhos dos data frames
+dim(house1)
+dim(house2)
+dim(vendas)
+
+names(house1)
+names(house2)
+names(vendas)
+
+head(vendas)
+rm(house1,house2) #Liberando memória: removendo os dados originais  
+```
+
+### Análise Exploratória
+
+```{r}
+#Extração das variaveis de estudo
+house.1<-vendas[,c(3,4,5,6,10,13)]
+
+#Ajute das variáveis de preço
+house.1$price<-house.1$price/1000
+
+nomes<-c("Preço da Casa (x US$1.000)","Nº de Quartos", "Nº de Banheiros","Interior da Casa (ft²)","Visão da Propriedade","Nível de Construção e Design")
+```
+
+```{r}
+#Resumos
+EstDescri=function(x) { #função que retorna as resumo descritivo das variáveis
+  c(NumObs    = length(x),
+    Maximo    = max(x, na.rm=T),
+    Minimo    = min(x, na.rm=T),
+    Amplitude = max(x, na.rm=T)-min(x, na.rm=T),
+    Media     = mean(x, na.rm=T),
+    #Mediana   = median(x, na.rm=T),
+    Q         = quantile(x,na.rm=T)[2],
+    Q         = quantile(x,na.rm=T)[3],
+    Q         = quantile(x,na.rm=T)[4],
+    Variancia = var(x, na.rm=T),
+    DesPadrao = sd(x, na.rm=T),
+    CV        = 100* sd(x, na.rm=T)/mean(x, na.rm=T),
+    Iqr       = IQR(x, na.rm=T), # Desvio Interquartilico
+    Ass       = 3*(mean(x, na.rm=T)- median(x, na.rm=T))/sd(x, na.rm=T),
+    Cur       = IQR(x, na.rm=T)/(2*(quantile(x,.90,na.rm=T)-quantile(x,.10,na.rm=T)))
+  )
+}
+
+Resultados<- data.frame(EstDescri(house.1[,1]))
+names(Resultados)[1]<-names(house.1)[1]
+
+for (x in 2:length(house.1)){
+  Resultados<-cbind(Resultados, EstDescri(house.1[,x]))
+  names(Resultados)[x]<-names(house.1)[x]
+}
+names(Resultados)<-nomes
+
+knitr::kable(Resultados,digits = 2,format.args = list(scientific = FALSE),
+             caption = "Resumo descritivo das variáveis de estudo")
+```
+
+::: {style="color: red"}
+Numa análise preliminar, pode-se afirmar a grande amplitude nos Preços
+de Vendas das casa e no Interior da Casa (ft²). O custo médio das casas
+no recorte foi de US\$540 Mil.Quanto as caracteristicas das casas, o nº
+de banheiros maximo registrado com 33, chama a atenção visto que as
+demais medidas separatrizes sugerem que a casa com maior numero de
+quartos não supere muito em 4 quartos.
+:::
+
+### Gráficos
+
+```{r}
+#Gráficos conjugados histograma e boxplot
+layout(mat = matrix(c(1:12),4,3, byrow=TRUE),  height = c(rep(c(0.2,0.7),2)))
+# construção do grid de impressão 3 linhas x 4 colunas
+
+for (i in seq(1,4,by=3)){ #linhas de impressão para cada par de gráficos
+
+  par(mar=c(0,4, 0, 1))   #limites das margensdos box-plots
+  for (i2 in i:(i+2)){    #gerando os box-plots
+    boxplot(house.1[,i2],xlab=nomes[i2],col="light blue",outcol="red",
+            horizontal=TRUE, xaxt="n", frame=F)
+  }
+  par(mar=c(5,4,0,1))     #limites das margens dos histogramas
+  for(i3 in i:(i+2)){     #gerando os histogramas
+    hist(house.1[,i3],xlab=nomes[i3],ylab="Densidade",
+         main="",col="light blue",prob=TRUE)
+    curve(dnorm(x,mean(house.1[,i3], na.rm=T),sd(house.1[,i3], na.rm=T)),add=T, col="red")
+  }
+}
+
+```
+
+::: {style="color: red"}
+o painel da combinação do histograma e box-plot, apresenta um panorama
+geral das variáveis selecionadas. De maneira geral, a presença de
+consideráveis de valores discrepantes ganha destaque. Porém, tal resumo
+gráfico não se mostra tão adequado para variáveis qualitativas
+(categóricas) como a Visão da Propriedade. É conveniente uma avaliação
+especifica para variáveis quantitativas e qualitativas.
+:::
+
+```{r}
+# Boxplots 
+layout(mat = matrix(c(1:4),2,2, byrow=TRUE),  height = c(rep(c(0.2,0.7),2)))
+par(mfrow=c(2,4),mar=c(4,4,3,2))
+
+for(i in 1:(length(house.1)-2)){
+  out<-boxplot.stats(house.1[,i])$out #+/- 1.58 IQR/sqrt(n)
+  out_ind <- which(house.1[,i] %in% c(out))
+  
+  boxplot(house.1[,i],ylab=nomes[i],col="light blue",frame=F, outcol="red")
+  mtext("Outlires (+)", side=1,line=0.5, at=0.7, cex = 0.6) 
+
+  boxplot(house.1[-out_ind,i],ylab=nomes[i],col="light blue", frame=F)
+  mtext("Outlires ( - ) *", side=1,line=0.5, at=0.7, cex = 0.6) 
+  
+  
+}
+par(oma=c(1,1,1.1,1),new=T,font=2,cex=0.5)
+mtext(outer=TRUE,paste("Boxplots das variáveis avaliadas"),side=3)
+mtext(outer=TRUE,paste("* Principais outliers removidos pelo método de Interválos interquartílico [+/-1.58 IQR/sqrt(n)]"),side=1, cex=0.8)
+
+
+```
+
+::: {style="color: red"}
+Os box-plots mostram a presença de muitas informações discrepantes,
+sugerindo uma avaliação mais aprofundada sobre a natureza destas com a
+possibilidade de remoção ou tratamento. No entanto, para este estudo,
+serão mantidos todos os dados originais.
+:::
+
+```{r}
+#Ajuste da variável visão da propriedade
+house.1<-cbind(house.1,view.f=house.1$view)
+house.1$view.f<-factor(house.1$view.f, levels = c("0","1","2","3","4"))
+
+#Ajuste da variável Nível de Construção e Design
+house.1<-cbind(house.1,grade.f=house.1$grade)
+house.1$grade.f[(house.1$grade %in% c(1:3))]<-"Low"
+house.1$grade.f[(house.1$grade %in% c(4:6))]<-"Low-Med"
+house.1$grade.f[(house.1$grade==7)]<-"Med"
+house.1$grade.f[(house.1$grade %in% c(8:10))]<-"Med-High"
+house.1$grade.f[(house.1$grade %in% c(11:13))]<-"High"
+house.1$grade.f<-factor(house.1$grade.f, levels = c("Low","Low-Med","Med","Med-High", "High"))
+```
+
+```{r}
+#graficos das variaveis categóricas
+par(mfrow = c(1,2))
+
+x<-xtabs(~view.f,data = house.1)
+barplot(x,
+        ylab = "Frequência absoluta",
+        xlab = nomes[5],
+        ylim = c(0,max(x)*1.1),#lim sup 10% a+ p/ max para melhor visualização
+        col=hcl.colors(length(x), "Green-Orange"))
+
+x<-xtabs(~grade.f,data = house.1)
+barplot(x,
+        ylab = "Frequência absoluta",
+        xlab = nomes[6],
+        ylim = c(0,max(x)*1.1),
+        col=hcl.colors(length(x), "Red-Green"),
+        cex.names = 0.6,
+        las=3)
+
+par(oma=c(1,1,1.1,1),new=T,font=2,cex=0.5)
+mtext(outer=TRUE,paste("Gráficos de Barras das Variáveis Categóricas"),side=3)
+
+#gray.colors(n)
+#hcl.pals() nomes das pallets
+```
+
+::: {style="color: red"}
+As variáveis categóricas mostram que a grande maioria da propriedade tem
+baixo nível na qualidade da visão, ao passo que o nível das construções
+são predominantemente consideradas como nível médio ou médio-alto.
+:::
+
+```{r}
+#limpando a mémoria
+rm(Resultados, EstDescri,out, out_ind,x,house.1,i,i2,i3)
+```
+
+## Questão 02
+
+Para as variáveis quantitativas, calcule a matriz de correlação e faça
+um gráco em que se possa facilmente visualizar as correlações entre as
+variáveis. Em seguida, faça diagramas de dispersão para os dois pares de
+variáveis mais correlacionados.
+
+### Matriz de Correlação
+
+```{r}
+COR<-cor(vendas[,-c(1,2,12)])
+# Kable é um gerador de tabela com formatação amigavel para saidas html
+knitr::kable(COR,digits = 2,format.args = list(scientific = FALSE),
+             caption = "Correlação entre as variáveis do banco de dados")
+```
+
+::: {style="color: red"}
+A matriz e correlação é uma ótima manaira de analizar os níveis
+associação linear entre pares de variáveis. Póem matizes com grandes
+números de váriáveis, podem não ser tão claras.
+:::
+
+```{r echo=TRUE}
+#instalação de pacote necessário para ilustração da matriz de correlação
+if (!require("corrplot")) install.packages("corrplot", dependencies = TRUE, INSTALL_opts = '--no-lock')
+library(corrplot)
+```
+
+```{r}
+#ilustração da matrix de correlações de maneira mais amigável
+corrplot(COR, method = "square", type="upper")
+rm(COR)
+```
+
+::: {style="color: red"}
+O correlograma produzido pelo "corrplor", evidencia associações
+consideráveis entre: *price* e bathrooms, sqft_living, grade, sqft_above
+e sqft_lot15; *sqft_living* e grade, sqft_above e sqft_lot15. As
+variáveis que representam áreas tem altos niveis de associação, pois
+algumas delas são composição de outras. Desta forma, estas variáveis
+podem ser consideradas autocorrelacionadas.
+:::
+
+### Gráficos
+
+```{r}
+# par de maior correlação
+plot(sqft_living ~ sqft_above,
+     data  = vendas,
+     main = "Dispressão \n Interior da casa X Interior da casa acima do nível do solo ",
+     cex.main = 0.9,
+     xlab = "Interior da casa acima do nível do solo (ft²)",
+     ylab = "Interior da casa (ft²)",
+     xlim = c(0,14000),
+     pch  = 21,
+     cex  = 0.8,
+     col  = "black",
+     bg   = "gray",
+     frame= FALSE)
+grid()
+abline(coef = c(0,1), col="red")
+```
+
+::: {style="color: red"}
+O gráfico acima mostra a disperssão dos dados entra as duas variavais de
+maior correlação: *a área do Interior da casa acima do nível do solo
+(ft²)* e *Interior da casa (ft²)*. A diagonal traçada em vermelho,
+mostra que a relação interior/acima será pelo menos 1. - As construções
+plotadas sobre a diagonal mostra que toda a construção está acima do
+solo e não temdo nada construído abaixo do solo; - Quanto mais afastado
+o ponto acima da diagonal se afasta dela maior a área contruída no
+subsolo; - Nenhuma construção é totalmente no subsolo.
+:::
+
+## Questão 03
+
+Verifique grafiamente a associação entre o preço e pelo menos três
+outras variáveis do banco de dados. Investigue a melhor forma de
+visualização: gráco de dispersão, *box-blots*.
+
+### Disperssão: Preço X Interior da Casa (by Beira-mar)
+
+```{r}
+#Disperssão 01
+cols<-hcl.colors(length(levels(as.factor(vendas$waterfront))), "Green-Orange")
+  
+plot(price/1000 ~ sqft_living,
+     data = vendas,
+     main = "Preço X Interior da Casa \n (by Beira-mar)",
+     xlab = "Interior da casa (ft²)",
+     ylab = "Preço (US$ *1.000)",
+     cex.main = 0.9,
+     bg = cols,
+     pch = 21,
+     cex=0.8,
+     frame= F)
+
+legend("top",
+       pch = 21,
+       lty = 0,
+       col = "black",
+       pt.bg = cols,
+       legend = c("Outros locais","Baira-mar"),
+       bty = "n")
+grid()
+rm(cols)
+```
+
+::: {style="color: red"}
+É possível observar uma relação positiva entre o preço de venda e o
+interior da casa. No entanto, não é possível visualizar alguma relação
+entre elas e a posição da construção a beira-mar.
+:::
+
+### Disperssão: Preço X Número de Quartos (by Condição do Apartamento)
+
+```{r}
+#Disperssão 01
+cols<-hcl.colors(length(levels(factor(vendas$condition))), "inferno")
+  
+plot(price/1000 ~ bedrooms,
+     data = vendas,
+     main = "Preço X Nº de Quartos \n (by Condição do Apartamento)",
+     xlab = "Nº de Quartos",
+     ylab = "Preço (US$ *1.000)",
+     cex.main = 0.9,
+     bg = cols,
+     pch = 21,
+     cex=0.8,
+     frame= F)
+legend("top",
+       pch = 21,
+       lty = 0,
+       col = "black",
+       pt.bg = cols,
+       legend = levels(factor(vendas$condition)),
+       bty = "n")
+grid()
+rm(cols)
+```
+
+::: {style="color: red"}
+A disperssão de preço de venda x nº de quartos associada a condição da
+Cosntrução não mostra nhenuma relação entre elas .
+:::
+
+### Box-Plot
+
+```{r}
+x<- data.frame(Indice=c(4,5,10,13,9),Nomes=(c(nomes[c(2,3,5,6)],"Beira-Mar")))
+par(mfrow = c(2,3))
+
+for(i in 1:length(x$Indice)){
+  boxplot((vendas$price/1000) ~ vendas[,x$Indice[i]],
+          xlab = x$Nomes[i],
+          ylab = "Preço de Venda (US$ x1.000)",
+          col  = "light blue",
+          frame = FALSE, 
+          outcol= "red")
+}
+rm(x)
+```
+
+::: {style="color: red"}
+As distribuições dos preços por grupos das variáveis nas representações
+dos box-plot, sedo possível notar oma relação positiva entre o preço e
+as medianas dos grupos da variáveis.
+:::
+
+## Questão 04
+
+Agrupe os dados por data (mês e ano) e calcule a média do preço para
+cada mês. Em seguida, faça um gráfico de linha com a variação do preço
+ao longo do tempo.
+
+A partir dos preços e pés quadrados do interior da casa, calcule, para
+cada registro, o preço médio do pé quadrado. Em seguida, faça um gráco
+de linha com a variação do preço médio ao longo do tempo.
+
+### Preparação e Ajustes
+
+```{r results='hide', message=FALSE}
+# instalação de pacotes para criação de gráfico temporal
+
+      
+
+```
+
+### Preços de Venda por Data
+
+```{r}
+#Arupando a média do preço de venda por date2() 
+x <- aggregate(vendas$price/1000, by = list(vendas$date2), FUN=mean)
+
+#criando a sequencia de datas para auxiliar no gráfico.
+x <-cbind(x,time=seq(from= as.Date("01/05/2014","%d/%m/%Y"),
+                     to  = as.Date("01/05/2015","%d/%m/%Y"),
+                     by  = "month"))
+
+# Necessário trnasformar em formato "xts" para poder usar o dygraph
+graf <- xts(x = x$x, order.by = x$time)
+
+dygraph(graf,
+        main="Comportamento da Média de Preços de Venda",
+        ylab="Preços de Venda (US$ *1.000)",
+        xlab="Meses")
+rm(x,graf)
+```
+
+::: {style="color: red"}
+A média de preços dos imóveis teve um comportamente de queda até
+fev/2015, quando retomou uma subida muito rápida.
+:::
+
+### Preço Médio por ft² do Interior da Casa
+
+```{r}
+# criando variável preço por ft² constrída
+vendas <- cbind(vendas, price_ft2 = (vendas$price/vendas$sqft_living))
+```
+
+```{r}
+#Arupando a média do preço/ft² date2() 
+x <- aggregate(vendas$price_ft2, by = list(vendas$date2), FUN=mean)
+
+#criando a sequencia de datas para auxiliar no gráfico.
+x <-cbind(x,time=seq(from= as.Date("01/05/2014","%d/%m/%Y"),
+                     to  = as.Date("01/05/2015","%d/%m/%Y"),
+                     by  = "month"))
+
+# Necessário trnasformar em formato "xts" para poder usar o dygraph
+graf <- xts(x = x$x, order.by = x$time)
+
+dygraph(graf,
+        main="Comportamento da Média de Preços/ft² do Interior da Casa",
+        ylab="Preços de Venda/ft²",
+        xlab="Meses")
+rm(x,graf)
+```
+
+::: {style="color: red"}
+o preço médio por ft² tem um movimento suave de queda no periodo de
+Mai/2014 a Dez/2014, onde foi registrado o menor patamar do preço. A
+partir de então um comportamento de valorização rápida superando os
+patamares anterioes no 3º mes subida.
+:::
+
+## Questão 05
+
+Calcule os quartis do preço (valores que dividem os preços em quatro
+faixas, cada um com 25% dos registros). Verifique em que faixa cada
+preço do banco de dados se encontra e associe a ele um cor diferente. Em
+seguida, faça um gráco em três dimensões com a latitude, longitude e o
+preço (com as cores correspondentes à sua respectiva faixa).
+
+### Preparação e Ajustes
+
+```{r echo=FALSE}
+# instalação de pacotes para criação de gráfico 3d
+if (!require("scatterplot3d")) install.packages("scatterplot3d", dependencies = TRUE, INSTALL_opts = '--no-lock')
+library("scatterplot3d")
+```
+
+```{r}
+# classificação dos quartis de preços de venda
+vendas<-cbind(vendas,
+              price.q = with(vendas,
+                             cut(price,
+                                 breaks = quantile(price,
+                                                   probs=seq(0,1, by=0.25),
+                                                   na.rm=TRUE),
+                                 labels = 1:4,
+                                 include.lowest=TRUE)))
+```
+
+### Gráfico 3D Estático
+
+```{r}
+#Scaterplot 3D
+
+#Paleta de cores
+cols<-hcl.colors(length(levels(vendas$price.q)), "PuOr")
+
+with(vendas,{
+  scatterplot3d(lat,long,price/1000,
+                main = "3-D Scaterplot",
+                xlab="Latitude",
+                zlab="Preço de Venda (US$ x1.000)",
+                ylab="Longitude",
+                type="p",
+                lty.hplot=2,
+                scale.y=.5,
+                box=T,
+                color=cols[price.q],
+                pch=16,
+                angle=45)
+})
+```
+
+::: {style="color: red"}
+A dispersão em 3 dimensões apresenta uma visualização planos na malha de
+latitude e logitude para cada nível dos quartis dos preços de vendas.
+Estes planos poderiam ser mais bem identificados com o isolamento dos
+maiores preços, os quais distorcem o eixo causando uma sobreposição
+visual dos pontos.
+:::
+
+### Gráfico 3D Interativo
+
+```{r echo=FALSE}
+if (!require("rgl")) install.packages("rgl", dependencies = TRUE, INSTALL_opts = '--no-lock')
+library(rgl)
+options(rgl.useNULL=TRUE) #Impedir que uma nova janela seja criada
+```
+
+```{r}
+# Retirada de uma amostra aleatória de 1000 casas para ilustrar o grafico interativo 
+vendas.1<-vendas[sample(1:nrow(vendas),1000,replace=F),]
+cols<-hcl.colors(length(levels(vendas$price.q)), "PuOr")
+
+```
+
+```{r}
+# Grafico interativo simples
+# plotids <- with(vendas.1, plot3d(lat,long,(price/1000),
+#  type="s", col=cols[price.q],size=1))
+# rglwidget(elementId = "plot3drgl")
+```
+
+```{r}
+#grafico interativo mais elaborado com a possibilidade de exibição dos elementos
+clear3d() # Remove the earlier display
+#rm(axesid)
+# Ciração dos elementos para o objeto grafico3d de acordo com os elementos da biblioteca rgl
+Q1 <- with(subset(vendas.1, price.q == 1),
+           spheres3d(lat,long,(price/1000),
+                     col=cols[price.q],
+                     radius = 50))
+
+Q2 <- with(subset(vendas.1, price.q == 2),
+           spheres3d(lat,long,(price/1000),
+                     col=cols[price.q],
+                     radius = 50))
+
+Q3 <- with(subset(vendas.1, price.q == 3),
+           spheres3d(lat,long,(price/1000),
+                     col=cols[price.q],
+                     radius = 50))
+
+Q4 <- with(subset(vendas.1, price.q == 4),
+           spheres3d(lat,long,(price/1000),
+                     col=cols[price.q],
+                     radius = 50))
+
+#cria ambiente grafico 3d com as proporções de cada eixo
+#criando o gráfico com o decorate3d é indispensável, senão os eixos desconfiguram 
+aspect3d(1,1,1)
+
+#criando o objeto grafico3d, criado por plot3d ou decorate3d
+axesid <- decorate3d(xlab = "Latitude", ylab = "Logitude", zlab = "Preço (x1.000)")
+
+#incluindo os elementos no objeto grafico3d
+rglwidget() %>% 
+toggleWidget(ids = Q1) %>%
+toggleWidget(ids = Q2) %>%
+toggleWidget(ids = Q3) %>%
+toggleWidget(ids = Q4) %>%
+toggleWidget(ids = axesid) %>% 
+#número e objetos a serem apresentados recomendo que seja last=nº de elementos toggleWinget
+#assim será apresentado em uma linha abaixo do gráfico
+asRow(last = 5) 
+```
+
+### Mapa - poins group Quatil(Price)
+
+```{r}
+library(leaflet)         
+cols<-c("orange", "lightgreen", "lightblue", "purple")
+
+vendas.1<-cbind(vendas.1,House=paste("House ",c(1:dim(vendas.1)[1])))
+
+printMoney <- function(x){
+  format(x, digits=10, nsmall=2, decimal.mark=",", big.mark=".")
+}
+
+icone <- awesomeIcons(
+  icon = 'home',
+  iconColor = "white",
+  library = 'ion',
+  markerColor = cols[vendas.1$price.q]
+)
+
+
+leaflet(vendas.1) %>% 
+  addTiles() %>% 
+  addAwesomeMarkers(popup = with(vendas.1,
+                        paste("<b>Preço: US$</b>",printMoney(price),"<br>",
+                              "<b>Área Construída (ft²):</b>",sqft_living ,"<br>",
+                              "<b>Área Terreno (ft²):</b>",sqft_lot ,"<br>",
+                              "<b>Quartos: </b>",bedrooms,"<br>",
+                              "<b>Banheiros: </b>",bathrooms,"<br>",
+                              "<b>Quartos: </b>",bedrooms,"<br>",
+                              "<b>Quartil: </b>",price.q)),
+             icon=icone,
+             label= ~House)
+```
+
+### Mapa - Clusters Quartil dos Preços
+
+```{r}
+vendas.2<-cbind(vendas.1,
+              price.qq = with(vendas.1,
+                             cut(price/1000,
+                                 breaks = quantile(price/1000,
+                                                   probs=seq(0,1, by=0.25),
+                                                   na.rm=TRUE),
+                                 #labels = 1:4,
+                                 include.lowest=TRUE)))
+
+vendas.df <- split(vendas.2, vendas.2$price.qq)
+
+l <- leaflet() %>% addTiles()
+
+names(vendas.df) %>%
+  purrr::walk( function(df) {
+    l <<- l %>%
+      addMarkers(data=vendas.df[[df]],
+                          lng=~long, lat=~lat,
+                          label=~price.q,
+                          popup = with(vendas.df[[df]],
+                                       paste("<b>Preço: US$</b>",printMoney(~price),"<br>",
+                                        "<b>Banheiros: </b>",~bathrooms,"<br>",
+                                        "<b>Quartos: </b>",~bedrooms)),
+                          group = df,
+                          clusterOptions = markerClusterOptions(removeOutsideVisibleBounds = F),
+                          labelOptions = labelOptions(noHide = F,
+                                                       direction = 'auto'))
+  })
+
+l %>%
+  addLayersControl(
+    overlayGroups = names(vendas.df),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+```

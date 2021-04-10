@@ -1,0 +1,30 @@
+---
+title: "Gráfico 3D interativo"
+author: "Marcel Quintela"
+date: "27/02/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+if (!require("rgl")) install.packages("rgl", dependencies = TRUE, INSTALL_opts = '--no-lock')
+library(rgl)
+options(rgl.useNULL=TRUE) #Impedir que uma nova janela seja criada
+```
+
+```{r}
+white <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv",sep=";")
+cols<-hcl.colors(length(levels(as.factor(white$quality))), "PuOr")
+```
+
+```{r}
+# Grafico interativo simples
+plotids <- with(white, plot3d(quality,density,residual.sugar,
+ type="s", col=cols[quality],size=1))
+rglwidget(elementId = "plot3drgl")
+```
+
+
