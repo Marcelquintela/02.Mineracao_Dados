@@ -1,0 +1,74 @@
+---
+title: "Aula 2 - Mineração"
+author: "Marcel Quintela"
+date: "30/01/2021"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r leitura dados}
+red <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv",sep=";")
+```
+
+```{r}
+names(red)
+```
+
+```{r}
+head(red)
+```
+
+```{r}
+plot(red$fixed.acidity, red$volatile.acidity)
+```
+
+```{r}
+par(mfrow=c(3,4))
+for (i in 1:11){
+  plot(red[,12], red[,i], xlab = 'Qualidade', ylab=names(red)[i])
+}
+```
+
+Box plot para ver as relações de qualidade com as demais variáveis
+
+```{r}
+par(mfrow=c(3,4))
+for (i in 1:11){
+  boxplot(red[,i]~red[,12], xlab = 'Qualidade', ylab=names(red)[i], col="light blue")
+}
+par(1)
+```
+
+```{r}
+cor(red[,4],red[,12])
+
+```
+
+```{r}
+par(mfrow=c(1,1))
+image(cor(red))
+```
+
+```{r eval=TRUE, include=FALSE}
+if (!require("corrplot")) install.packages("corrplot", dependencies = TRUE, INSTALL_opts = '--no-lock')
+```
+
+```{r}
+corrplot(cor(red),method = "number", type="")
+```
+
+```{r eval=TRUE, include=FALSE}
+if (!require("scatterplot3d")) install.packages("scatterplot3d", dependencies = TRUE, INSTALL_opts = '--no-lock')
+
+```
+
+```{r}
+scatterplot3d(red[,2],red[,11],red[,12])
+```

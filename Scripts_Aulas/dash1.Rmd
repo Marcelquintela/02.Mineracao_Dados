@@ -1,0 +1,67 @@
+---
+title: "Meu primeiro (ou não) dashboard"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(plotly)
+library(ggplot2)
+```
+
+# Introdução {.sidebar}
+
+Vamos revisitar alguns exemplos em que utilizamos bancos de dados fornecidos pelo *R*. Em particular, vamos analisar dois conjuntos de dados: `cars` e `beaver2`.
+
+
+# Banco de dados *cars*
+
+## Coluna 1
+
+### Velocidade versus distância percorrida
+
+```{r}
+p <- plot_ly(cars,x=~speed,y=~dist,type="scatter")
+p
+```
+
+## Coluna 2
+
+### Histograma da velocidade 
+
+```{r}
+p <- plot_ly(cars,x=~speed,type="histogram")
+p
+```
+
+
+### Histograma da distância percorrida
+
+```{r}
+p <- plot_ly(cars,x=~dist,type="histogram",marker=list(color="rgb(255,20,50)"))
+p
+```
+
+# Banco de dados *beaver2*
+
+## Coluna 1
+
+### Box-plots usando o *plotly*
+
+```{r}
+p <- plot_ly(beaver2,y=~temp[activ==0],type="box",name="Sem atividade") %>% add_trace(y=~temp[activ==1],type="box",marker=list(color="rgb(150,50,50)"),name="Com atividade") %>% layout(xaxis=list(title="Atividade"),yaxis=list(title="Temperatura"))
+p
+```
+
+## Coluna 2
+
+### Box-plots usando o *ggplot2* + *plotly*
+
+```{r}
+p <- ggplot(beaver2,aes(x=as.factor(activ),y=temp)) + geom_boxplot() + labs(x="Atividade",y="Temperatura") + scale_x_discrete(labels=c("Sem atividade","Com atividade"))
+ggplotly(p)
+```
+

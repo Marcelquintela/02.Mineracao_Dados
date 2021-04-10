@@ -1,0 +1,100 @@
+---
+title: "Untitled"
+author: "Marcel Quintela"
+date: "27/03/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+.packages = c("dygraphs", "xts",
+              "plotly",# pacote para análise gráfica
+              "leaflet",   # pacote para criação de mapas
+              "rgdal",   # pacote para importação de dados geoespaciais
+              "DT",   # pacote para criação de tabelas interativas
+              "flexdashboard",  # pacote para criação de dashboards
+              "shiny")  # pacote para criaçao de aplicativos interativos
+
+# Instalar (caso ainda não tenha sido instalado)
+.inst <- .packages %in% installed.packages()
+if(length(.packages[!.inst]) > 0) install.packages(.packages[!.inst],dependencies = TRUE)
+
+# Carregando bibliotecas
+lapply(.packages, require, character.only=TRUE)
+
+```
+
+Importação
+
+```{r}
+dados <- read.csv("http://im.ufrj.br/~joao/cienciadedados/covid2.csv")
+head(dados)   # vislumbre dos dados
+names(dados)   # # nomes das colunas do objeto (variáveis)
+attach(dados)
+
+```
+
+```{r}
+stats::filter(aux[,2], filter=rep(1,7), method="convolution", sides=1, circular=F)
+```
+
+```{r marcelEX}
+z<-dados[city=="Rio de Janeiro",]
+aux <- aggregate(z$new_confirmed,by=list(z$date),FUN="sum")
+
+ma<- stats::filter(aux[,2], filter=rep(1/15,15), method="convolution", sides=1, circular=F)
+
+x <-cbind(aux,MA=as.numeric(ma),time=as.Date(unique(z$date),"%Y-%m-%d"))
+
+graf <- xts(x = x[,2:3], order.by = x$time)
+dygraph(graf,
+        main="Casos x Dia no Estado do Rio de Janeiro",
+        ylab="Novos Casos",
+        xlab="Dias")
+
+```
+
+```{r}
+data <- aux[,1]  # data
+casos <- aux[,2]   # casos
+
+mm <- function(serie,dias){
+  lag <- dias - 1
+  aux  <- rep(NA,length=length(serie))
+  for(i in (lag+1):length(serie)){
+    aux[i] <- mean(serie[(i-lag):i])
+  }
+  return(aux)
+}
+
+casosRJ <- new_confirmed[city=="Rio de Janeiro"]
+dataRJ <- date[city=="Rio de Janeiro"]
+suav <- mm(casosRJ,15)
+df2 <- data.frame("casos"=casosRJ,"data"=dataRJ,"suav"=suav)
+head(df2)
+ggplot(df2,aes(x=as.Date(data),y=casos)) + geom_line(size=0.5,col="blue") + geom_line(aes(y=suav),size=1,col="red")
+
+```
+```{r}
+
+p <- plot_ly(x=as.Date(dataRJ),y=casosRJ,type="scatter",mode="lines",name="Novos Casos") %>% add_trace(y=suav,type="scatter",mode="lines",name="Média móvel")
+p
+
+```
+
+```{r}
+plot(casos,type="l",axes=FALSE,xlab="Dias",ylab="Casos novos")
+ticks <- seq(0,300,by=50)
+axis(1,at=ticks+1,labels=data[ticks+1],cex.axis=0.7,las=1)
+axis(2)
+
+```
+
+```{r}
+library(leaflet)
+
+
+
+```
+

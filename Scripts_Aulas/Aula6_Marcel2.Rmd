@@ -1,0 +1,295 @@
+---
+title: "Untitled"
+author: "João B. M. Pereira"
+date: "27/03/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+dados <- read.csv("http://im.ufrj.br/~joao/cienciadedados/covid2.csv")
+head(dados)   # vislumbre dos dados
+names(dados)   # # nomes das colunas do objeto (variáveis)
+attach(dados)
+```
+```{r}
+library("stringr")
+mes <- str_sub(date,6,7)   # posições 6 e 7 correspondem ao mês
+dia <- str_sub(date,9,10)
+ts.plot(mes)
+ts.plot(dia)
+```
+
+```{r}
+aux <- aggregate(new_confirmed,FUN="sum")
+data <- aux[,1]  # data
+casos <- aux[,2]   # casos
+```
+
+
+```{r}
+head(aux)
+ts.plot(casos)
+```
+
+```{r}
+length(casos)
+```
+
+
+```{r}
+plot(casos,type="l",axes=FALSE,xlab="Dias",ylab="Casos novos")
+ticks <- seq(0,300,by=50)
+axis(1,at=ticks+1,labels=data[ticks+1],cex.axis=0.7,las=3)
+axis(2)
+```
+
+```{r}
+unique(city)
+```
+
+```{r}
+table(city)
+```
+
+```{r}
+plot(new_confirmed[city=="Rio de Janeiro"],type="l",axes=FALSE)
+ticks <- seq(0,300,by=50)
+axis(1,at=ticks+1,labels=data[ticks+1],cex.axis=0.7,las=3)
+axis(2)
+#plot(new_confirmed[city=="Petrópolis"],type="l",ylim=c(0,max(new_confirmed[city=="Rio de Janeiro"])))
+```
+
+```{r}
+plot(as.Date(data[city=="Rio de Janeiro"]),new_confirmed[city=="Rio de Janeiro"],type="l")
+#lines(as.Date(data[city=="Petrópolis"]),new_confirmed[city=="Petrópolis"],col=2)
+```
+
+
+```{r}
+.packages = c("dygraphs", "xts")# Lista de bibliotecas necessárias
+
+# Instalar (caso ainda não tenha sido instalado)
+.inst <- .packages %in% installed.packages()
+if(length(.packages[!.inst]) > 0) install.packages(.packages[!.inst],dependencies = TRUE)
+# Carregando bibliotecas
+lapply(.packages, require, character.only=TRUE)
+
+x <-cbind(aux,time=as.Date(unique(date),"%Y-%m-%d"))
+graf <- xts(x = x$x, order.by = x$time)
+dygraph(graf,
+        main="Casos x Dia no Estado do Rio de Janeiro",
+        ylab="Novos Casos",
+        xlab="Dias")
+
+```
+
+```{r}
+mm <- function(serie,dias){
+  lag <- dias - 1
+  aux  <- rep(NA,length=length(serie))
+  for(i in (lag+1):length(serie)){
+    aux[i] <- mean(serie[(i-lag):i])
+  }
+  return(aux)
+}
+```
+
+```{r}
+suav <- mm(casos,7)
+suav2 <- mm(casos,15)
+df <- data.frame("data"=data,"casos"=casos,"suav"=suav,"suav2"=suav2)
+head(df)
+```
+```{r}
+library(ggplot2)
+```
+
+```{r}
+ggplot(df,aes(x=as.Date(data),y=casos)) + geom_line(size=0.5,col="blue") + labs(x="Tempo",y="Casos",title="Estado do Rio de Janeiro") + 
+  geom_line(aes(y=suav),col="red",size=1) +
+  geom_line(aes(y=suav2),col="goldenrod",size=1)
+```
+
+```{r}
+casosRJ <- new_confirmed[city=="Rio de Janeiro"]
+dataRJ <- date[city=="Rio de Janeiro"]
+suav <- mm(casosRJ,15)
+df2 <- data.frame("casos"=casosRJ,"data"=dataRJ,"suav"=suav)
+head(df2)
+```
+
+```{r}
+ggplot(df2,aes(x=as.Date(data))) + geom_bar(aes(weights=casos),col="cyan",fill="cyan") + geom_line(aes(y=suav),size=1,col="red")
+```
+```{r}
+library(plotly)
+```
+
+```{r}
+
+```
+
+```{r}
+p <- plot_ly(x=as.Date(dataRJ),y=casosRJ,type="scatter",mode="lines")
+```
+
+```{r}
+library(magrittr) # pipe
+```
+
+```{r}
+p <- plot_ly(x=as.Date(dataRJ),y=casosRJ,type="scatter",mode="lines",name="Novos Casos") %>% add_trace(y=suav,type="scatter",mode="lines",name="Média móvel")
+p
+```
+
+```{r}
+p <- plot_ly(x=as.Date(dataRJ),y=casosRJ,type="bar",name="Novos Casos") %>% add_trace(y=suav,type="scatter",mode="lines",name="Média móvel")
+p
+```
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+p <- plot_ly(x=as.Date(dataRJ),y=casosRJ,type="bar",name="Novos Casos")
+p <- p %>% add_trace(y=suav,type="scatter",mode="lines",name="Média móvel")
+p
+```
+
+```{r}
+z<-dados[city=="Rio de Janeiro",]
+aux <- aggregate(z$new_confirmed,by=list(z$date),FUN="sum")
+
+ma<- stats::filter(aux[,2], filter=rep(1/15,15), method="convolution", sides=1, circular=F)
+
+x <-cbind(aux,MA=as.numeric(ma),time=as.Date(unique(z$date),"%Y-%m-%d"))
+
+graf <- xts(x = x[,2:3], order.by = x$time)
+
+dygraph(graf,
+        main="Casos x Dia no Estado do Rio de Janeiro",
+        ylab="Novos Casos",
+        xlab="Dias") %>% 
+  dyRangeSelector() %>%
+  dyBarSeries('x') %>% 
+  dyFilledLine('MA')
+
+```
+
+
+```{r}
+library("leaflet")
+```
+
+
+```{r}
+ct <- leaflet()
+ct <- addTiles(ct)
+ct <- addMarkers(ct,lat=-22.85809187293725,lng=-43.23112677625925,popup="Centro de Tecnologia da UFRJ")
+ct
+```
+
+```{r}
+names(providers)
+```
+
+
+```{r}
+ct <- leaflet()   # inicializa o mapa
+ct <- addProviderTiles(ct,providers$Esri.WorldPhysical)   # adiciona uma camada ao mapa
+ct <- addMarkers(ct,lat=-22.85809187293725,lng=-43.23112677625925,popup="Centro de Tecnologia da UFRJ")   # adiciona um marcador ao mapa
+ct 
+```
+
+```{r}
+fig <- makeIcon("http://im.ufrj.br/~joao/cienciadedados/godzilla.png",iconWidth = 100,iconHeight = 130)
+```
+
+```{r}
+texto <- "<b>Centro de Tecnologia</b><br/>Av. Athos da Silveira Ramos, 149<br/>Cidada Universitária"   # texto em HTML
+ct <- leaflet()   # inicializa o mapa
+ct <- addTiles(ct)   # adiciona uma camada ao mapa
+ct <- addMarkers(ct,lat=-22.85809187293725,lng=-43.23112677625925,popup=texto,icon=fig)   # adiciona um marcador ao mapa
+ct  
+```
+
+
+
+```{r}
+library("rgdal")
+```
+
+```{r}
+mapa <- readOGR("http://im.ufrj.br/~joao/cienciadedados/rio.json")
+```
+
+```{r}
+plot(mapa,col="light blue")
+```
+
+```{r}
+names(mapa)
+```
+
+```{r}
+lmapa <- leaflet(mapa) %>% addPolygons()
+lmapa
+```
+
+```{r}
+lmapa <- leaflet(mapa) %>% addPolygons(weight=1,color="black",fillColor="yellow",label=~name,highlightOptions = highlightOptions(color="white",weight=3,
+      bringToFront = TRUE)) #%>% #addCircles(lat=-22.85809187293725,lng=-43.23112677625925,radius=8000,col="red",label="Ilha do Fundão")
+lmapa
+```
+
+```{r}
+dez <- date[length(date)]   # última data
+dez
+```
+
+```{r}
+acdez <- last_available_confirmed_per_100k_inhabitants[date==dez]   # taxa acumulada na última dada
+head(acdez)
+cidez <- city[date==dez]
+head(cidez)
+iddez <- city_ibge_code[date==dez]
+head(iddez)
+```
+
+
+```{r}
+df <- data.frame("taxa"=acdez,"id"=iddez,"cidade"=cidez)
+```
+
+```{r}
+mapanew <- merge(mapa,df,by="id")
+names(mapanew)
+```
+
+
+
+
+
+```{r}
+cores <- colorQuantile(heat.colors(10),NULL)   # palheta que será utilizada
+
+lmapa1 <- leaflet(mapanew) %>% addPolygons(weight=0.5,color="black",
+  label=~paste0(cidade,": ",round(taxa,2)),
+  fillColor=~cores(taxa),smoothFactor=0.5,opacity=0.8, fillOpacity=0.5,
+  highlightOptions=highlightOptions(color="white",weight=5,bringToFront=TRUE)) %>% addLegend(pal=cores,values=~taxa,opacity=0.5)
+
+lmapa1
+```
+
+
+```{r}
+paste("Aula","6")
+paste0("Aula","6")
+```
+
