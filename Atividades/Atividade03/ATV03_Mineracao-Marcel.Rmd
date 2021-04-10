@@ -1,0 +1,381 @@
+---
+title: "Mineração de Dados"
+Professor: "João Batista M. Pereira"
+Disciplina: "Mineração de Dados"
+Aluno: "Marcel Dantas de Quintela"
+date: "02 de abril de 2021"
+lang: "pt-br"
+bibliography: bibliografia.bib
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+    code_download: yes
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE)
+
+setwd("C:\\Users\\Marcel\\Dropbox\\00-Ciencias-de-Dados\\M02_Mineracao\\Atividades\\ATV03_M02_Mineracao")
+```
+
+# Atividade 03
+
+------------------------------------------------------------------------
+
+::: {style="text-align: right"}
+**Professor**: $\:\:\:\:$ João Batista M. Pereira
+
+**Aluno**:$\:$ Marcel Dantas de Quintela
+:::
+
+------------------------------------------------------------------------
+
+## Instruções
+
+A desnutrição e um problema grave que torna crianças vulneráveis a
+doenças e a morte. Existem quatro tipos gerais de desnutrição; em
+inglês, são chamados de wasting, stunting, underweight e overweight.
+
+O banco de dados a ser analisado corresponde a porcentagens medias
+anuais de crianças com menos de 5 anos que possuem determinado tipo de
+desnutrição para 50 países. Os dados são da UNICEF e correspondem aos
+anos de 1983 a 2019, mas nem todos os países foram pesquisados em todos
+os anos. A porcentagem média anual para um país foi calculada
+considerando-se os anos para os quais se tem dados para ele. Os dados
+estão no arquivo malnutrition.csv e as variáveis disponíveis são:
+
+-   **Country**: país;
+-   **Income.classification**: 0 para renda baixa, 1 para renda média
+    baixa, 2 para renda média alta, 3 para renda alta;
+-   **Severe.wasting**: porcentagem de crianças com menos de 5 anos
+    abaixo de menos três desvios padrões a partir da razão peso por
+    altura mediana;
+-   **Wasting**: porcentagem de crianças com menos de 5 anos abaixo de
+    menos dois desvios padrões a partir da relação peso por altura
+    mediana;
+-   **Overweight**: porcentagem de crianças com menos de 5 anos acima de
+    mais dois desvios padrões a partir da razão peso por altura mediana;
+-   **Stunting**: porcentagem de crianças com menos de 5 anos abaixo de
+    menos dois desvios padrões a partir da razão altura por idade
+    mediana;
+-   **Underweight**: porcentagem de crianças com menos de 5 anos abaixo
+    de menos dois desvios padrões a partir da razão peso por idade
+    mediana.
+
+A atividade deve ser feita no R Markdown e entregue em HTML ou PDF com
+os códigos explicitados e as análises comentadas. Os gráficos devem ser
+explicativos, com nomes corretos nos eixos, por exemplo.
+
+```{r Bibliotecas, eval=T, results='hide'}
+# Lista de pacotes a serem utilizados
+rm(list = ls())
+.packages = c("dendextend",# Ajuda na cor das arvores do dendograma  
+              "knitr",     # Ajuste de tabelas
+              "ggcorrplot",# gráficos para as correlações utilizando o ggplot2
+              "gridExtra", # Ajuste de grids dno ggplot semenhante ao panel
+              "factoextra",# visualização e análise dos resultado ACP
+              "ggplot2",   # pacote para análise gráfica
+              "plotly")    # pacote para análise gráfica
+
+# Instalar (caso ainda não tenha sido instalado)
+.inst <- .packages %in% installed.packages()
+
+if(length(.packages[!.inst]) > 0) 
+  install.packages(.packages[!.inst],dependencies = TRUE)
+
+# Carregando bibliotecas
+lapply(.packages, require, character.only=TRUE)
+```
+
+## Questão 01 {.tabset .tabset-pills}
+
+1.  Importe a base de dados no arquivo para o `R` e crie um dataframe
+    com as cinco variáveis correspondentes as porcentagens de
+    desnutrição e nomeie suas linhas com os nomes dos países. Em
+    seguida, faça uma análise de componentes principais para estas
+    variáveis. Investigue:
+
+    i.  a porcentagem da variabilidade explicada por cada componente; e
+    ii. faça um biplot para investigar quais variáveis são mais
+        correlacionadas e como elas contribuem para as componentes
+        principais.
+    iii. Investigue também quais países são mais parecidos de acordo com
+         as variáveis analisadas.
+
+### Dados
+
+```{r Dados}
+# Leitura, ajustes e preparação dos dados
+Nutri<-read.csv("malnutrition.csv")
+```
+
+```{r}
+#nomeando as linhas do data frame
+row.names(Nutri)<-Nutri$Country
+Nutri1<-Nutri[,-c(1:3)]
+```
+
+### Correlação
+
+```{r}
+#Grafico de correlação
+ggcorrplot(cor(Nutri1),type="upper",lab=TRUE,lab_size=3.5)
+
+```
+
+Notável correlação positiva entre Severe.Wasting, Wasting, Stunting e
+Underweight. A alta correlação entre as duas primeiras já era esperada
+por Serere.Wasting medida está contida na Wasting.
+
+O Overweigth mostrou comportamento diferente em relação as demais
+correções existentes. Indicando um possível afastamento das demais
+variáveis na redução de fatores.
+
+### ACP
+
+#### Procedimento de Análise de Componentes Principais
+
+```{r}
+# matriz de correlação(scale=T) utilizada, com dados padronizados(center=T)
+acp<-prcomp(Nutri1, center=T, scale.=T) # outra função seria princomp(Nutri1,cor=T)
+
+#autovaores - variâncias
+summary(acp)
+
+#autovetores - carga fatorial
+summary(acp)$rotation
+
+print(paste("Variância total:",sum(acp$sdev^2)))#soma dos quadrados dos desvios
+print(paste("Total de Variáveis Originaisl:",length(Nutri1)))#numero de variáveis
+```
+
+O Resultado acima, mostra as variâncias de cada componente (Autovalor),
+assim como a proporção da variância explicada por cada componente.
+
+Segundo [@MINGITI:2013, pp. 90], quando a matriz de correlação é
+utilizada na extração da componentes, a variância total
+`sum(acp$sdev^2)` = `r sum(acp$sdev^2)` é igual ao número de variáveis
+originais `length(Nutri1)` = `r length(Nutri1)`. Assim, para escolha do
+número de componentes principais, o critério de Kaiser é indicado, o
+qual consiste em manter no sistema as componentes cujo autovalores são
+maior ou igual a 1 $(\hat{\lambda}\geq1)$.
+
+Logo, seguindo o critério de Kaiser, as duas primeiras componentes são
+as únicas capazes de explicar a menos a quantidade de variância de uma
+variável original padronizada. Estes dois componentes são capazes de
+explicar 89,29% da variância total das variáveis originais.
+
+```{r}
+fviz_eig(acp, addlabels = T)
+```
+
+Este gráfico mostra a contribuição de cada componente na explicação da
+variância dos dados. À medida que as componentes crescem, menor é a
+contribuição na explicação do comportamento do fato observado.
+
+### Componentes
+
+#### Avaliação dos Componentes
+
+```{r}
+#correlação entre os 2 primeiros componentes
+kable((acp$sdev[1:2]*t(acp$rotation[,1:2])),digits = 3,
+      caption = "Correlação entre os 2 principais componentes e as variáveis ")
+```
+
+1º Componente com forte correlação com todas a variáveis, com exceção do
+Overweight 2º componente pode ser um contrate do Sobrepeso sob as demais
+variáveis
+
+1º Componete pode ser entendido como um indicador de desnutrição. Dada a
+correlação acima, é possível afirmar que quanto maior o índice maior a
+incidência da desnutrição na população alvo.
+
+#### Gráfico de classificação dos Países segundo o Indicador de Desnutrição (CP1)
+
+```{r}
+escores <- acp$x[, 1]
+ordem <- order(acp$x[, 1], decreasing = TRUE)
+barplot(escores[ordem], ylab = "Escores de Desnutrição ", las = 2, 
+        cex.names = 0.5 , col="lightblue",
+        main="Classificação dos Países Segundo \n o Indicador de Desnutrição (CP1)")
+```
+
+O gráfico acima apresenta como é possível utilizar os escores da
+Primeira Componente (CP1) - Índice de Desnutrição para classificar os
+países.
+
+### Contrib 1
+
+#### Contribuição Variáveis
+
+```{r}
+#contribuição das variáveis ao modelo
+PC1<-fviz_contrib(acp, choice = "var", axes = 1)
+PC2<-fviz_contrib(acp, choice = "var", axes = 2)
+PC<-fviz_contrib(acp, choice = "var", axes = 1:2)
+grid.arrange(PC1, PC2, PC,nrow=2)
+```
+
+As representações acima mostram as contribuições das principais
+variáveis aos principais componentes do modelo descritor.
+
+Conforme visto nos autovetores acima listados, foi possível constatar
+por meio de seus valores absolutos(cargas fatoriais) que a magnitude das
+variáveis Underweight, Wasting e Sturting era maior na CP1, enquanto
+Overweigght e Severe.Wasting contribuíam mais na CP2. E é exatamente
+isso que a representação acima está mostrando.
+
+A linha de referência corresponde ao valor esperado se a contribuição
+for uniforme. Logo, uma contribuição acima da linha de referência pode
+ser considerada importante para contribuir com a dimensão.
+
+### Contrib 2
+
+#### Contribuição Elementos
+
+```{r}
+#Contribução e cada linha do Dataframe
+fviz_contrib(acp, choice = "ind", axes = 1) + 
+  ggtitle("Contribuição dos Países na CP1") +
+  theme(axis.text.x = element_text(size = 5))
+fviz_contrib(acp, choice = "ind", axes = 2)+
+  ggtitle("Contribuição dos Países na CP2") +
+  theme(axis.text.x = element_text(size = 5))
+```
+
+### Biplot
+
+Assim como nas variáveis, as representações acima mostram as
+contribuições dos países (cada elemento) em cada uma das duas principais
+componentes.
+
+```{r}
+fviz_pca_biplot(acp, repel = TRUE,
+                col.var = "black", # cor das variáveis
+                col.ind = "blue")
+```
+
+Grande dispersão dos Países, sem que seja possível identificar algum
+tipo de padrão a ser compreendido.
+
+DJIBOUTI, COMOROS(THE) e BURUNDI estão mais afastados parecem ser
+outliers.
+
+Os autovetores (cargas fatoriais) Underweight, Stunting, Wasting e
+Severe. Wasting tem grandes cargas positivas no componente 1. Já
+Overweight contribui com carga fatorial negativa para o componente 2.
+
+## Questão 02
+
+2.  Faça um biplot em que os países são identificados (cor e/ou tipo de
+    ponto) de acordo como a renda. Você consegue observar alguma relação
+    entre os países mais parecidos segundo a análise de componentes
+    principais e sua categoria de renda?
+
+```{r}
+Nutri<-cbind(Nutri,Income=factor(Nutri[,3], levels = c(0:3),
+                                 labels = c("Baixa","Média Baixa","Média Alta","Alta")))
+fviz_pca_biplot(acp, repel = TRUE,
+                col.var = "black",       # cor das variáveis
+                col.ind = Nutri$Income, # cor dos paises
+                addEllipses = TRUE,
+                legend.title = "Nível de Renda")
+```
+
+Considerando a Componente 01 - Indicador de Desnutrição, é possível
+notar o quanto os extremos dos níveis de renda estão em lados opostos.
+
+Países com nível de renda **alto** como Japão, Alemanha e Austrália
+aparecem totalmente no lado de contribuição negativa para a desnutrição,
+assim como a maioria dos países com nível de renda **média alta**.
+
+Por outro lado, todos os países nível de renda **baixo** aparecem
+massivamente no 1º quadrante e os de renda **média baixa** , na maioria,
+estão posicionados nos quadrantes 1 e 4, em ambos os casos contribuindo
+positivamente na componente 1.
+
+Logo, não seria incoerente afirmar que do ponto de vista da componente
+1, existem dois grandes grupos distintos de países conforme o nível de
+renda. Sendo plausível dizer que uma relação inversa entre renda e
+desnutrição esteja presente no espaço amostral em questão.
+
+## Questão 03 {.tabset .tabset-pills}
+
+3.  Considerando as mesmas variáveis da análise anterior, faça um
+    dendrograma para classificar os países em grupos (clusters).
+    Experimente fazê-lo colorido selecionando diferentes números de
+    grupos. Os resultados são condizentes com os da análise de
+    componentes principais?
+
+```{r}
+#Padronizando as colunas do datraframe 
+NutriS<-apply(Nutri1,MARGIN=2,FUN="scale")
+row.names(NutriS)<-row.names(Nutri1)
+
+dist.NutriS<-dist(NutriS,method="minkowski", p=2)
+# Distância menos afetada pela presença de outliers
+# p=2 distancia como se fosse dentro de um circulo
+# https://stackoverflow.com/questions/47526577/plot-the-minkowski-distance-with-different-p
+
+clust.NutriS<-hclust(dist.NutriS,method="ward.D2")
+#Método de variação mínima de Ward com dissimilaridades são elevadas ao quadrado antes do agrupamento
+
+dend<-as.dendrogram(clust.NutriS)
+
+#par(mar=c(6,4,1,1))
+cores <- c("#ff8000","#1a1aff","#669900","#e6e600","#cc00cc")
+```
+
+```{r results='asis'}
+
+for (i in 2:5){
+  cat("###", "Dendrama",i-1,'\n')
+  plot(color_branches(dend,k=i,col=cores[1:5]),
+             main=paste0("K=",i,"; Dist:Minkowski; Hclust:ward.D2"))
+  cat( '\n\n')
+}
+```
+
+Os clusters formados com K=4 apresentam semelhança com os grupos de
+países em cada quadrante no [Biplot].
+
+## Questão 04 {.tabset .tabset-pills}
+
+4.  Ainda considerando as mesmas variáveis das análises anteriores,
+    utilize o algoritmo k-means para classificar os países em grupos.
+    Experimente diferentes números de grupos e faca gráficos em que as
+    observações são plotadas nas coordenadas das componentes principais
+    e os grupos estejam identificados. Os resultados são condizentes com
+    os das análises anteriores?
+
+```{r}
+K<-list(k2=NULL,k3=NULL,k4=NULL,k5=NULL)
+#P<-list(p2=NULL,p3=NULL,p4=NULL,p5=NULL)
+
+for (i in 1:4){
+  K[i]<-list(kmeans(NutriS,i+1))
+  #P[i]<-list(fviz_cluster(K[[i]],data=NutriS) + labs(title=names(K[i])))
+}
+
+```
+
+```{r, results='asis',echo=FALSE}
+for (i in seq_along(K)){
+  cat("###", names(K[i]),  '\n')
+  print(fviz_cluster(K[[i]],data=NutriS) + labs(title=names(K[i])))
+  cat( '\n\n')
+}
+```
+
+Os clusters formados com K=4 apresentam semelhança com os grupos de
+países em cada quadrante no [Biplot].
+
+# Referências Bibliográficas
